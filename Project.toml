@@ -1,0 +1,4 @@
+name = "LibEEMD"
+uuid = "cf272ae8-9fcb-11e8-0df5-b59353b92c40"
+authors = ["Felix Cremer <felix.cremer@uni-jena.de>"]
+version = "0.1.0"
