@@ -1,4 +1,5 @@
 module LibEEMD
+using Libdl
 
 export emd, eemd, ceemdan
 
