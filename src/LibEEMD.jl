@@ -1,14 +1,29 @@
 module LibEEMD
 using Libdl
 
+const depsjl_path = joinpath(@__DIR__, "..", "deps", "deps.jl")
+
+if !isfile(depsjl_path)
+    error("LibEEMD not installed properly, run Pkg.build(\"LibEEMD\"), restart Julia and try again")
+end
+@show depsjl_path
+include(depsjl_path)
+@show libeemd
+
+function __init__()
+    check_deps()
+    global libeemd
+    global libeemd_open = Libdl.dlopen_e(libeemd)
+    @assert libeemd_open != C_NULL "Could not open $libeemd"
+end
+
 export emd, eemd, ceemdan
 
 function eemd(ts::AbstractVector{T} where T<:Number,
                 num_imfs=emd_num_imfs(ts), ensemble_size=250, noise_strength=0.2,
                 S_number=4, num_siftings=50, rng_seed=0)
-    libeemd_path = Libdl.find_library("libeemd", [pwd()])
-    libeemd = Libdl.dlopen(libeemd_path)
-    eemd_ptr = Libdl.dlsym(libeemd, :eemd)
+
+    eemd_ptr = Libdl.dlsym_e(libeemd_open, :eemd)
 
     output = zeros(typeof(ts[1]), (size(ts)[1], num_imfs))
     ccall(eemd_ptr, Cint, (Ptr{Cdouble}, Csize_t, Ptr{Cdouble}, Csize_t,
@@ -21,13 +36,13 @@ end
 
 
 function ceemdan(ts::AbstractVector{T} where T <:Number,
-                num_imfs=emd_num_imfs(ts), ensemble_size=250, noise_strength=0.2,
+                num_imfs=emd_num_imfs(ts)::Integer, ensemble_size=250, noise_strength=0.2,
                 S_number=4, num_siftings=50, rng_seed=0)
-
-    libeemd_path = Libdl.find_library("libeemd", [pwd()])
-    libeemd = Libdl.dlopen(libeemd_path)
-    ceemdan_ptr = Libdl.dlsym(libeemd, :ceemdan)
-    output = zeros(typeof(ts[1]), (size(ts)[1], num_imfs))
+    global libeemd
+    libeemd_open = Libdl.dlopen_e(libeemd)
+    @assert libeemd_open != C_NULL "Could not open $libeemd"
+    ceemdan_ptr = Libdl.dlsym_e(libeemd_open, :ceemdan)
+    output = zeros(typeof(ts[1]), convert(Dims,(size(ts,1), num_imfs)))
     ccall(ceemdan_ptr, Cint, (Ptr{Cdouble}, Csize_t, Ptr{Cdouble}, Csize_t,
             Cuint, Cdouble, Cuint, Cuint, Culong),
             ts, size(ts)[1], output, num_imfs, ensemble_size, noise_strength,
